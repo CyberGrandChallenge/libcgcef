@@ -1,0 +1,20 @@
+Files: *
+Copyright: 1995-2014 Michael Riepe
+License: LGPL
+
+Files: debian/*
+Copyright: 2014 Mike Frantzen <mikef@kududyn.com>
+License: MIT
+
+Files: * 
+Copyright: 2014 Mike Frantzen <mikef@kududyn.com>
+License: LGPL
+CGC Specific modifications also fall under the LGPL license, but are
+Copyrighted Mike Frantzen.
+
+Files: * 
+Copyright: 1991 Free Software Foundation, Inc.
+License: LGPL
+
+Full text of the license can be found in the file
+`/usr/share/common-licenses/LGPL`
