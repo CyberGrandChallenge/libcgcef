@@ -1,0 +1,12 @@
+#!/usr/bin/make -f
+
+CPPFLAGS:=$(shell dpkg-buildflags --get CPPFLAGS)
+CFLAGS:=$(shell dpkg-buildflags --get CFLAGS)
+CXXFLAGS:=$(shell dpkg-buildflags --get CXXFLAGS)
+LDFLAGS:=$(shell dpkg-buildflags --get LDFLAGS)
+
+%:
+	dh $@  --with autotools-dev
+
+override_dh_auto_install:
+	$(MAKE) prefix=$$(pwd)/debian/libcgcef0/usr install
