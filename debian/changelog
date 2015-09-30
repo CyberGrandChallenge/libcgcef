@@ -1,0 +1,11 @@
+libcgcef0 (7667-cfe-rc2) UNRELEASED; urgency=low
+
+  * build
+
+ -- Brian Caswell <bmc@lungetech.com>  Tue, 29 Sep 2015 15:05:01 +0000
+
+libcgcef0 (1.0) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Brian Caswell <bmc@lungetech.com>  Mon, 14 Apr 2014 18:34:59 -0400
