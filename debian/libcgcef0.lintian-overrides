@@ -1,0 +1,3 @@
+non-dev-pkg-with-shlib-symlink
+hardening-no-fortify-functions
+hardening-no-relro
