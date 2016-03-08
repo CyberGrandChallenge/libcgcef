@@ -1,0 +1,379 @@
+# configure.in - Configure template for libcgcef.
+# Process this file with autoconf to produce a configure script.
+# Copyright (C) 1995 - 2006 Michael Riepe
+#
+# This library is free software; you can redistribute it and/or
+# modify it under the terms of the GNU Library General Public
+# License as published by the Free Software Foundation; either
+# version 2 of the License, or (at your option) any later version.
+#
+# This library is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# Library General Public License for more details.
+#
+# You should have received a copy of the GNU Library General Public
+# License along with this library; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301, USA
+
+# @(#) $Id: configure.in,v 1.41 2008/05/23 08:17:56 michael Exp $
+
+AC_INIT(VERSION)
+AC_CONFIG_HEADER(config.h lib/sys_cgcef.h)
+
+AC_PREREQ(2.13)
+
+mr_PACKAGE(libcgcef)
+
+dnl NOTE: there must be at least one .po file!
+ALL_LINGUAS=`cd $srcdir/po && echo *.po | sed 's/\.po//g'`
+
+dnl Assuming all arguments have already been processed...
+set `echo $VERSION | sed 's/\./ /g'`
+MAJOR=${1-1}
+MINOR=${2-0}
+PATCH=${3-0}
+AC_SUBST(MAJOR)
+
+dnl Checks for programs.
+AC_PROG_MAKE_SET
+AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_INSTALL
+AC_PROG_RANLIB
+AC_PROG_LN_S
+
+dnl Checks for libraries.
+
+dnl Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS(unistd.h stdint.h fcntl.h)
+AC_CHECK_HEADERS(cgcef.h sys/cgcef.h link.h sys/link.h)
+AC_CACHE_CHECK([if ${CC} can compile cgcef.h], libcgcef_cv_cgcef_h_works, [
+  AC_TRY_COMPILE(
+    [#if HAVE_CGCEF_H
+    #include <cgcef.h>
+    #elif HAVE_SYS_CGCEF_H
+    #include <sys/cgcef.h>
+    #endif],
+    [CGCEf32_Ehdr dummy],
+    [libcgcef_cv_cgcef_h_works=yes],
+    [libcgcef_cv_cgcef_h_works=no])
+])
+if test "$libcgcef_cv_cgcef_h_works" = no; then
+  ac_cv_header_cgcef_h=no
+  ac_cv_header_sys_cgcef_h=no
+fi
+if test "$ac_cv_header_cgcef_h" = yes; then
+  AC_DEFINE(__LIBCGCEF_HEADER_CGCEF_H, [<cgcef.h>])
+elif test "$ac_cv_header_sys_cgcef_h" = yes; then
+  AC_DEFINE(__LIBCGCEF_HEADER_CGCEF_H, [<sys/cgcef.h>])
+fi
+
+AC_CHECK_HEADERS(ar.h libcgcef.h nlist.h gcgcef.h)
+AC_MSG_CHECKING([whether to install <libcgcef.h>, <nlist.h> and <gcgcef.h>])
+AC_ARG_ENABLE(compat,
+  [  --enable-compat         install <libcgcef.h>, <nlist.h> and <gcgcef.h> (default: auto)],
+  [DO_COMPAT="$enableval"],
+  [if test "$ac_cv_header_libcgcef_h$ac_cv_header_nlist_h$ac_cv_header_gcgcef_h" = yesyesyes
+  then DO_COMPAT=no
+  else DO_COMPAT=yes
+  fi])
+AC_MSG_RESULT($DO_COMPAT)
+AC_SUBST(DO_COMPAT)
+
+dnl Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+
+AC_CHECK_SIZEOF(short,2)
+AC_CHECK_SIZEOF(int,4)
+AC_CHECK_SIZEOF(long,4)
+AC_CHECK_SIZEOF(long long,0)
+# Windows port
+AC_CHECK_SIZEOF(__int64, 0)
+
+if test "$ac_cv_header_cgcef_h" = yes \
+|| test "$ac_cv_header_sys_cgcef_h" = yes; then
+
+  # Slowaris declares CGCEf32_Dyn in <link.h>.
+  # QNX declares CGCEf32_Dyn in <sys/link.h>.
+  AC_CACHE_CHECK([for struct CGCEf32_Dyn], libcgcef_cv_struct_cgcef32_dyn, [
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H], [CGCEf32_Dyn x],
+      [libcgcef_cv_struct_cgcef32_dyn=yes],
+      AC_TRY_COMPILE([#include <link.h>], [CGCEf32_Dyn x],
+	[libcgcef_cv_struct_cgcef32_dyn=link.h],
+	AC_TRY_COMPILE([#include <sys/link.h>], [CGCEf32_Dyn x],
+	  [libcgcef_cv_struct_cgcef32_dyn=sys/link.h],
+	  [libcgcef_cv_struct_cgcef32_dyn=no])))])
+  if test "$libcgcef_cv_struct_cgcef32_dyn" = link.h; then
+    AC_DEFINE(__LIBCGCEF_NEED_LINK_H)
+  elif test "$libcgcef_cv_struct_cgcef32_dyn" = sys/link.h; then
+    AC_DEFINE(__LIBCGCEF_NEED_SYS_LINK_H)
+  elif test "$libcgcef_cv_struct_cgcef32_dyn" = no; then
+    AC_MSG_ERROR([no declaration for CGCEf32_Dyn])
+  fi
+
+  # Linux declares struct nlist in <cgcef.h>.
+  AC_CACHE_CHECK([for struct nlist in cgcef.h], libcgcef_cv_struct_nlist, [
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H], [struct nlist nl],
+      [libcgcef_cv_struct_nlist=yes],
+      [libcgcef_cv_struct_nlist=no])])
+  if test "$libcgcef_cv_struct_nlist" = yes; then
+    AC_DEFINE(HAVE_STRUCT_NLIST_DECLARATION)
+  fi
+
+  # Check for 64-bit data types.
+  AC_CACHE_CHECK([for struct CGCEf64_Ehdr], libcgcef_cv_struct_cgcef64_ehdr,
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H],
+      [CGCEf64_Ehdr x],
+      [libcgcef_cv_struct_cgcef64_ehdr=yes],
+      [libcgcef_cv_struct_cgcef64_ehdr=no]))
+
+  # Linux lacks typedefs for scalar CGCEF64_* types.
+  AC_CACHE_CHECK([for CGCEf64_Addr], libcgcef_cv_type_cgcef64_addr,
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H],
+      [CGCEf64_Addr x],
+      [libcgcef_cv_type_cgcef64_addr=yes],
+      [libcgcef_cv_type_cgcef64_addr=no]))
+
+  # IRIX' struct CGCEf64_Rel is slightly different. Ugh.
+  AC_CACHE_CHECK([for struct CGCEf64_Rel], libcgcef_cv_struct_cgcef64_rel,
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H],
+      [CGCEf64_Rel x; x.r_info = 1],
+      [libcgcef_cv_struct_cgcef64_rel=yes],
+      AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H],
+	[CGCEf64_Rel x; x.r_sym = 1],
+	[libcgcef_cv_struct_cgcef64_rel=irix],
+	[libcgcef_cv_struct_cgcef64_rel=no])))
+
+  case "$libcgcef_cv_struct_cgcef64_ehdr:\
+$libcgcef_cv_type_cgcef64_addr:\
+$libcgcef_cv_struct_cgcef64_rel" in
+    yes:yes:yes)
+      libcgcef_64bit=yes;;
+    yes:yes:irix)
+      AC_DEFINE(__LIBCGCEF64_IRIX)
+      libcgcef_64bit=yes;;
+    yes:no:yes)
+      AC_DEFINE(__LIBCGCEF64_LINUX)
+      libcgcef_64bit=yes;;
+    *)
+      libcgcef_64bit=no;;
+  esac
+
+  # Check for symbol versioning definitions
+  AC_CACHE_CHECK([for CGCEf32_Verdef], libcgcef_cv_verdef32,
+    AC_TRY_COMPILE(
+      [#include __LIBCGCEF_HEADER_CGCEF_H
+      #if __LIBCGCEF_NEED_LINK_H
+      #include <link.h>	/* Solaris wants this */
+      #endif],
+      [struct {
+	CGCEf32_Verdef vd;
+	CGCEf32_Verdaux vda;
+	CGCEf32_Verneed vn;
+	CGCEf32_Vernaux vna;
+      } x],
+      [libcgcef_cv_verdef32=yes],
+      [libcgcef_cv_verdef32=no]))
+
+  AC_CACHE_CHECK([for CGCEf64_Verdef], libcgcef_cv_verdef64,
+    AC_TRY_COMPILE(
+      [#include __LIBCGCEF_HEADER_CGCEF_H
+      #if __LIBCGCEF_NEED_LINK_H
+      #include <link.h>	/* Solaris wants this */
+      #endif],
+      [struct {
+	CGCEf64_Verdef vd;
+	CGCEf64_Verdaux vda;
+	CGCEf64_Verneed vn;
+	CGCEf64_Vernaux vna;
+      } x],
+      [libcgcef_cv_verdef64=yes],
+      [libcgcef_cv_verdef64=no]))
+
+  AC_CACHE_CHECK([for SHT_SUNW_verdef], libcgcef_cv_sun_verdef,
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H],
+      [CGCEf32_Word x = SHT_SUNW_verdef + SHT_SUNW_verneed + SHT_SUNW_versym],
+      [libcgcef_cv_sun_verdef=yes],
+      [libcgcef_cv_sun_verdef=no]))
+
+  AC_CACHE_CHECK([for SHT_GNU_verdef], libcgcef_cv_gnu_verdef,
+    AC_TRY_COMPILE([#include __LIBCGCEF_HEADER_CGCEF_H],
+      [CGCEf32_Word x = SHT_GNU_verdef + SHT_GNU_verneed + SHT_GNU_versym],
+      [libcgcef_cv_gnu_verdef=yes],
+      [libcgcef_cv_gnu_verdef=no]))
+else
+  # lib/cgcef_repl.h supports 64-bit
+  libcgcef_64bit=yes
+
+  # lib/cgcef_repl.h supports symbol versioning
+  libcgcef_cv_verdef32=yes
+  libcgcef_cv_verdef64=yes
+  libcgcef_cv_sun_verdef=yes
+  libcgcef_cv_gnu_verdef=yes
+fi
+
+AC_CACHE_CHECK([for 64-bit integer], libcgcef_cv_int64, [
+  if test "$ac_cv_sizeof_long" = 8; then
+    libcgcef_cv_int64='long'
+  elif test "$ac_cv_sizeof___int64" = 8; then
+    libcgcef_cv_int64='__int64'
+  elif test "$ac_cv_sizeof_long_long" = 8; then
+    libcgcef_cv_int64='long long'
+  else
+    libcgcef_cv_int64=no
+  fi])
+if test "$libcgcef_cv_int64" = no; then
+  libcgcef_64bit=no
+else
+  AC_DEFINE_UNQUOTED(__libcgcef_i64_t, [$libcgcef_cv_int64])
+  AC_DEFINE_UNQUOTED(__libcgcef_u64_t, [unsigned $libcgcef_cv_int64])
+fi
+
+AC_CACHE_CHECK([for 32-bit integer], libcgcef_cv_int32, [
+  if test "$ac_cv_sizeof_int" = 4; then
+    libcgcef_cv_int32='int'
+  elif test "$ac_cv_sizeof_long" = 4; then
+    libcgcef_cv_int32='long'
+  else
+    libcgcef_cv_int32=no
+  fi])
+if test "$libcgcef_cv_int32" = no; then
+  AC_MSG_ERROR([neither int nor long is 32-bit])
+else
+  AC_DEFINE_UNQUOTED(__libcgcef_i32_t, [$libcgcef_cv_int32])
+  AC_DEFINE_UNQUOTED(__libcgcef_u32_t, [unsigned $libcgcef_cv_int32])
+fi
+
+AC_CACHE_CHECK([for 16-bit integer], libcgcef_cv_int16, [
+  if test "$ac_cv_sizeof_short" = 2; then
+    libcgcef_cv_int16='short'
+  elif test "$ac_cv_sizeof_int" = 2; then
+    libcgcef_cv_int16='int'
+  else
+    libcgcef_cv_int16=no
+  fi])
+if test "$libcgcef_cv_int16" = no; then
+  AC_MSG_ERROR([neither short nor int is 16-bit])
+else
+  AC_DEFINE_UNQUOTED(__libcgcef_i16_t, [$libcgcef_cv_int16])
+  AC_DEFINE_UNQUOTED(__libcgcef_u16_t, [unsigned $libcgcef_cv_int16])
+fi
+
+dnl Checks for library functions.
+AC_FUNC_MMAP
+AC_CHECK_FUNCS(ftruncate memcmp memcpy memmove)
+AC_REPLACE_FUNCS(memset)
+if test "$ac_cv_func_memset" = yes; then
+  AC_DEFINE(HAVE_MEMSET)
+fi
+
+AC_CACHE_CHECK([whether overlapping arrays are copied correctly],
+  libcgcef_cv_working_memmove,
+  [AC_TRY_RUN(changequote(<<, >>)dnl
+<<#include "confdefs.h"
+#if HAVE_MEMMOVE
+extern void *memmove();
+#else
+extern void bcopy();
+#define memmove(d,s,n) bcopy((s),(d),(n))
+#endif
+extern int strcmp();
+main() {
+  char buf[] = "0123456789";
+  memmove(buf + 1, buf, 9);
+  if (strcmp(buf, "0012345678")) exit(1);
+  exit(0);
+}>>, changequote([, ])dnl
+    libcgcef_cv_working_memmove=yes,
+    libcgcef_cv_working_memmove=no,
+    libcgcef_cv_working_memmove='maybe not')])
+if test "$libcgcef_cv_working_memmove" != yes; then
+  AC_DEFINE(HAVE_BROKEN_MEMMOVE)
+fi
+
+AC_CACHE_CHECK([the coffee machine], mr_cv_coffee_machine,
+  [mr_cv_coffee_machine='empty - operator may not work as expected'])
+
+dnl Check for 64-bit support.
+AC_MSG_CHECKING([whether 64-bit CGCEF support is sufficient])
+AC_MSG_RESULT($libcgcef_64bit)
+AC_MSG_CHECKING([whether to include 64-bit support])
+if test "$libcgcef_64bit" = no; then
+  libcgcef_enable_64bit=no
+else
+  AC_ARG_ENABLE(cgcef64,
+    [  --enable-cgcef64          compile in 64-bit support (default: auto)],
+    [libcgcef_enable_64bit="$enableval"],
+    [libcgcef_enable_64bit=yes])
+fi
+AC_MSG_RESULT($libcgcef_enable_64bit)
+if test "$libcgcef_enable_64bit" = yes; then
+  AC_DEFINE(__LIBCGCEF64)
+fi
+
+AC_MSG_CHECKING([whether versioning support is sufficient])
+libcgcef_versioning=no
+case "$libcgcef_enable_64bit:$libcgcef_cv_verdef32:$libcgcef_cv_verdef64" in
+  no:yes:* | yes:yes:yes)
+    if test "$libcgcef_cv_sun_verdef" = yes; then
+      AC_DEFINE(__LIBCGCEF_SUN_SYMBOL_VERSIONS)
+      libcgcef_versioning=yes
+    elif test "$libcgcef_cv_gnu_verdef" = yes; then
+      AC_DEFINE(__LIBCGCEF_GNU_SYMBOL_VERSIONS)
+      libcgcef_versioning=yes
+    fi;;
+esac
+AC_MSG_RESULT($libcgcef_versioning)
+AC_MSG_CHECKING([whether to include versioning support])
+if test "$libcgcef_versioning" = no; then
+  libcgcef_enable_versioning=no
+else
+  AC_ARG_ENABLE(versioning,
+    [  --enable-versioning     compile in versioning support (default: auto)],
+    [libcgcef_enable_versioning="$enableval"],
+    [libcgcef_enable_versioning=yes])
+fi
+AC_MSG_RESULT($libcgcef_enable_versioning)
+if test "$libcgcef_enable_versioning" = yes; then
+  AC_DEFINE(__LIBCGCEF_SYMBOL_VERSIONS)
+fi
+
+dnl Check for NLS support.
+mr_ENABLE_NLS
+dnl this is for gmo2msg...
+LIBINTL=
+AC_CHECK_LIB(intl, gettext, [LIBINTL=-lintl])
+AC_SUBST(LIBINTL)
+
+dnl Check for shared library support.
+mr_ENABLE_SHARED
+
+dnl Check for extended CGCEF format support
+AC_ARG_ENABLE(extended-format,
+  [  --enable-extended-format    support extended file formats (default: no)],
+  [mr_enable_extended_format="$enableval"],
+  [mr_enable_extended_format=no])
+if test "$mr_enable_extended_format" = yes; then
+  AC_DEFINE(ENABLE_EXTENDED_FORMAT)
+fi
+
+dnl Check if CGCEF sanity checks should be enabled
+AC_ARG_ENABLE(sanity-checks,
+  [  --enable-sanity-checks      enable sanity checks by default (default: yes)],
+  [mr_enable_sanity_checks="$enableval"],
+  [mr_enable_sanity_checks=yes])
+if test "$mr_enable_sanity_checks" = yes; then
+  AC_DEFINE(ENABLE_SANITY_CHECKS)
+fi
+
+dnl Check for debug support.
+mr_ENABLE_DEBUG
+
+AC_OUTPUT([Makefile lib/Makefile po/Makefile libcgcef.pc],
+  [echo timestamp > stamp-h; echo timestamp > lib/stamp-h])
+
+# vi: set ts=8 sw=2 :
